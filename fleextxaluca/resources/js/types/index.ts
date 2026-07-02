@@ -124,6 +124,56 @@ export interface PaginationLink {
     active: boolean;
 }
 
+export interface DashboardMetric {
+    label: string;
+    value: string | number;
+    trend: string;
+    accent?: 'positive' | 'negative' | 'neutral';
+}
+
+export interface DashboardReservationItem {
+    id: number;
+    vehicle_id: number;
+    reservation_number: string;
+    status: string;
+    start_at: string;
+    end_at: string;
+    purpose: string | null;
+    vehicle?: ReservationVehicle | null;
+}
+
+export interface DashboardMonthPoint {
+    month: string;
+    reservations: number;
+    revenue: number;
+    maintenance_cost: number;
+}
+
+export interface DashboardMetric {
+    label: string;
+    value: string | number;
+    trend: string;
+    accent?: 'positive' | 'negative' | 'neutral';
+}
+
+export interface DashboardReservationItem {
+    id: number;
+    vehicle_id: number;
+    reservation_number: string;
+    status: string;
+    start_at: string;
+    end_at: string;
+    purpose: string | null;
+    vehicle?: ReservationVehicle | null;
+}
+
+export interface DashboardMonthPoint {
+    month: string;
+    reservations: number;
+    revenue: number;
+    maintenance_cost: number;
+}
+
 export interface Reservation {
     id: number;
     agency_id: number;
