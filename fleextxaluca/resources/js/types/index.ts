@@ -100,6 +100,15 @@ export interface Vehicle {
     deleted_at: string | null;
 }
 
+export interface ReservationVehicle {
+    id: number;
+    agency_id: number;
+    unit_number: string;
+    plate_number: string;
+    status: string;
+    agency?: Agency | null;
+}
+
 export interface PaginationLink {
     url: string | null;
     label: string;
@@ -110,8 +119,11 @@ export interface Reservation {
     id: number;
     agency_id: number;
     vehicle_id: number;
+    vehicle?: ReservationVehicle | null;
     requested_by_user_id: number | null;
     approved_by_user_id: number | null;
+    requestedBy?: User | null;
+    approvedBy?: User | null;
     reservation_number: string;
     status: string;
     start_at: string;
@@ -126,6 +138,17 @@ export interface Reservation {
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
+}
+
+export interface ReservationCalendarEvent {
+    id: number;
+    vehicle_id: number;
+    vehicle_label: string;
+    title: string;
+    status: string;
+    start_at: string;
+    end_at: string;
+    reservation_number: string;
 }
 
 export interface Maintenance {

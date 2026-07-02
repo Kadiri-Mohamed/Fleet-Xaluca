@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ReservationStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,6 +43,38 @@ class Reservation extends Model
             'checked_in_at' => 'datetime',
             'metadata' => 'array',
         ];
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        if ($search === null || $search === '') {
+            return $query;
+        }
+
+        return $query->where(function (Builder $builder) use ($search) {
+            $builder
+                ->where('reservation_number', 'like', '%'.$search.'%')
+                ->orWhere('purpose', 'like', '%'.$search.'%')
+                ->orWhereHas('vehicle', function (Builder $vehicleQuery) use ($search) {
+                    $vehicleQuery
+                        ->where('unit_number', 'like', '%'.$search.'%')
+                        ->orWhere('plate_number', 'like', '%'.$search.'%');
+                });
+        });
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopeOverlapping(Builder $query, string $startAt, string $endAt): Builder
+    {
+        return $query
+            ->whereIn('status', ReservationStatus::blockingValues())
+            ->where('start_at', '<', $endAt)
+            ->where('end_at', '>', $startAt);
     }
 
     public function agency(): BelongsTo
