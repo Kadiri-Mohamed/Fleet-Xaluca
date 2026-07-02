@@ -149,29 +149,13 @@ export interface DashboardMonthPoint {
     maintenance_cost: number;
 }
 
-export interface DashboardMetric {
-    label: string;
-    value: string | number;
-    trend: string;
-    accent?: 'positive' | 'negative' | 'neutral';
-}
-
-export interface DashboardReservationItem {
+export interface FinancialTransactionVehicle {
     id: number;
-    vehicle_id: number;
-    reservation_number: string;
+    agency_id: number;
+    unit_number: string;
+    plate_number: string;
     status: string;
-    start_at: string;
-    end_at: string;
-    purpose: string | null;
-    vehicle?: ReservationVehicle | null;
-}
-
-export interface DashboardMonthPoint {
-    month: string;
-    reservations: number;
-    revenue: number;
-    maintenance_cost: number;
+    agency?: Agency | null;
 }
 
 export interface Reservation {
@@ -242,9 +226,11 @@ export interface FinancialTransaction {
     id: number;
     agency_id: number;
     vehicle_id: number | null;
+    vehicle?: FinancialTransactionVehicle | null;
     reservation_id: number | null;
     maintenance_id: number | null;
     created_by_user_id: number | null;
+    createdBy?: User | null;
     transaction_number: string;
     transaction_date: string;
     direction: string;
@@ -260,4 +246,27 @@ export interface FinancialTransaction {
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
+}
+
+export interface FinancialTransactionSummary {
+    revenue: number;
+    fuel_cost: number;
+    insurance: number;
+    maintenance_cost: number;
+    other_expenses: number;
+    expenses: number;
+    profit: number;
+    roi: number;
+}
+
+export interface FinancialTransactionCategoryBreakdownPoint {
+    category: string;
+    total: number;
+}
+
+export interface FinancialTransactionSeriesPoint {
+    month: string;
+    revenue: number;
+    expenses: number;
+    profit: number;
 }
