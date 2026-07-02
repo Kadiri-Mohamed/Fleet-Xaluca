@@ -12,9 +12,10 @@ export default function AuthSplitLayout({ children, title, description }: AuthLa
     const { name } = usePage<SharedData>().props;
 
     return (
-        <div className="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
-            <div className="bg-muted relative hidden h-full flex-col p-10 text-white lg:flex dark:border-r">
-                <div className="absolute inset-0 bg-zinc-900" />
+        <div className="relative grid h-dvh flex-col items-center justify-center overflow-hidden bg-background px-6 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
+            <div className="relative hidden h-full flex-col overflow-hidden border-r border-border/60 p-10 text-white lg:flex">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(221_83%_53%_/_0.35),transparent_32%),linear-gradient(160deg,hsl(240_10%_10%),hsl(240_10%_4%))]" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,transparent_49%,hsl(255_100%_100%/_0.05)_50%,transparent_51%,transparent_100%)] bg-[length:18px_18px] opacity-40" />
                 <Link href={route('home')} className="relative z-20 flex items-center text-lg font-medium">
                     <AppLogoIcon className="mr-2 size-8 fill-current text-white" />
                     {name}
@@ -23,8 +24,8 @@ export default function AuthSplitLayout({ children, title, description }: AuthLa
                     <p>Fleet operations, reservations, maintenance, and financial tracking in one place.</p>
                 </div>
             </div>
-            <div className="w-full lg:p-8">
-                <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+            <div className="w-full bg-[radial-gradient(circle_at_top,hsl(221_83%_53%_/_0.05),transparent_28%)] lg:p-10">
+                <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[380px]">
                     <Link href={route('home')} className="relative z-20 flex items-center justify-center lg:hidden">
                         <AppLogoIcon className="h-10 fill-current text-black sm:h-12" />
                     </Link>
