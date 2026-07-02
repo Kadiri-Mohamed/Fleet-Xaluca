@@ -8,6 +8,7 @@ use App\Http\Requests\Reservation\StoreReservationRequest;
 use App\Http\Requests\Reservation\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Support\DocumentNumberGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,9 +84,9 @@ class ReservationController extends Controller
         ]);
     }
 
-    public function store(StoreReservationRequest $request): RedirectResponse
+    public function store(StoreReservationRequest $request, DocumentNumberGenerator $numberGenerator): RedirectResponse
     {
-        return $this->persist($request->validated(), null);
+        return $this->persist($request->validated(), null, $numberGenerator);
     }
 
     public function show(Reservation $reservation, ReservationConflictDetector $conflicts): Response
@@ -138,10 +139,10 @@ class ReservationController extends Controller
     /**
      * @param  array<string, mixed>  $data
      */
-    private function persist(array $data, ?Reservation $reservation): RedirectResponse
+    private function persist(array $data, ?Reservation $reservation, DocumentNumberGenerator $numberGenerator): RedirectResponse
     {
         try {
-            DB::transaction(function () use ($data, $reservation): void {
+            DB::transaction(function () use ($data, $reservation, $numberGenerator): void {
                 $user = request()->user();
 
                 $payload = [
@@ -149,7 +150,7 @@ class ReservationController extends Controller
                     'vehicle_id' => $data['vehicle_id'],
                     'requested_by_user_id' => $reservation?->requested_by_user_id ?? $user?->id,
                     'approved_by_user_id' => $reservation?->approved_by_user_id,
-                    'reservation_number' => $reservation?->reservation_number ?? $this->generateReservationNumber(),
+                    'reservation_number' => $reservation?->reservation_number ?? $numberGenerator->generate('RSV'),
                     'status' => $data['status'],
                     'start_at' => $data['start_at'],
                     'end_at' => $data['end_at'],
@@ -175,10 +176,5 @@ class ReservationController extends Controller
         }
 
         return redirect()->route('reservations.index')->with('success', $reservation ? 'Reservation updated successfully.' : 'Reservation created successfully.');
-    }
-
-    private function generateReservationNumber(): string
-    {
-        return 'RSV-'.now()->format('YmdHis').'-'.Str::upper(Str::random(5));
     }
 }

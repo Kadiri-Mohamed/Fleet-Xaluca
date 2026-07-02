@@ -7,10 +7,10 @@ use App\Http\Requests\Maintenance\StoreMaintenanceRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceRequest;
 use App\Models\Maintenance;
 use App\Models\Vehicle;
+use App\Support\DocumentNumberGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -72,16 +72,16 @@ class MaintenanceController extends Controller
         ]);
     }
 
-    public function store(StoreMaintenanceRequest $request): RedirectResponse
+    public function store(StoreMaintenanceRequest $request, DocumentNumberGenerator $numberGenerator): RedirectResponse
     {
-        $maintenance = DB::transaction(function () use ($request): Maintenance {
+        $maintenance = DB::transaction(function () use ($request, $numberGenerator): Maintenance {
             $data = $request->validated();
 
             return Maintenance::query()->create([
                 'agency_id' => $data['agency_id'],
                 'vehicle_id' => $data['vehicle_id'],
                 'created_by_user_id' => $request->user()?->id,
-                'maintenance_number' => $this->generateMaintenanceNumber(),
+                'maintenance_number' => $numberGenerator->generate('MNT'),
                 'type' => $data['type'] ?? 'general',
                 'status' => $data['status'],
                 'scheduled_at' => $data['scheduled_at'],
@@ -154,10 +154,5 @@ class MaintenanceController extends Controller
         $maintenance->delete();
 
         return redirect()->route('maintenances.index')->with('success', 'Maintenance deleted successfully.');
-    }
-
-    private function generateMaintenanceNumber(): string
-    {
-        return 'MNT-'.now()->format('YmdHis').'-'.Str::upper(Str::random(5));
     }
 }

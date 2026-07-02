@@ -8,12 +8,12 @@ use App\Http\Requests\FinancialTransaction\StoreFinancialTransactionRequest;
 use App\Http\Requests\FinancialTransaction\UpdateFinancialTransactionRequest;
 use App\Models\FinancialTransaction;
 use App\Models\Vehicle;
+use App\Services\Finance\FinanceReportService;
+use App\Support\DocumentNumberGenerator;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,13 +24,10 @@ class FinancialTransactionController extends Controller
         $this->authorizeResource(FinancialTransaction::class, 'financial_transaction');
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request, FinanceReportService $financeReports): Response
     {
         $filters = $request->only(['search', 'category', 'status', 'vehicle_id', 'month']);
         $month = Carbon::parse($filters['month'] ?? now()->format('Y-m-01'));
-        $months = collect(CarbonPeriod::create($month->copy()->subMonths(5)->startOfMonth(), '1 month', $month->copy()->endOfMonth()))
-            ->map(fn (Carbon $date) => $date->copy())
-            ->values();
 
         $transactions = FinancialTransaction::query()
             ->with(['vehicle:id,agency_id,unit_number,plate_number', 'vehicle.agency:id,name', 'createdBy:id,name'])
@@ -57,9 +54,9 @@ class FinancialTransactionController extends Controller
                 fn (FinancialTransactionStatus $status) => ['value' => $status->value, 'label' => str($status->value)->headline()->toString()],
                 FinancialTransactionStatus::all(),
             ),
-            'monthlySeries' => $months->map(fn (Carbon $monthPoint) => $this->monthlyPoint($monthPoint))->all(),
-            'categoryBreakdown' => $this->categoryBreakdown($month),
-            'summary' => $this->summary($month),
+            'monthlySeries' => $financeReports->monthlySeries($month),
+            'categoryBreakdown' => $financeReports->categoryBreakdown($month->copy()->startOfMonth(), $month->copy()->endOfMonth()),
+            'summary' => $financeReports->summary($month->copy()->startOfMonth(), $month->copy()->endOfMonth()),
             'canCreate' => $request->user()?->can('create', FinancialTransaction::class) ?? false,
             'canManage' => $request->user()?->can('update', FinancialTransaction::class) ?? false,
         ]);
@@ -91,9 +88,9 @@ class FinancialTransactionController extends Controller
         ]);
     }
 
-    public function store(StoreFinancialTransactionRequest $request): RedirectResponse
+    public function store(StoreFinancialTransactionRequest $request, DocumentNumberGenerator $numberGenerator): RedirectResponse
     {
-        $transaction = DB::transaction(function () use ($request): FinancialTransaction {
+        $transaction = DB::transaction(function () use ($request, $numberGenerator): FinancialTransaction {
             $data = $request->validated();
             $category = FinancialTransactionCategory::from($data['category']);
 
@@ -101,7 +98,7 @@ class FinancialTransactionController extends Controller
                 'agency_id' => $data['agency_id'],
                 'vehicle_id' => $data['vehicle_id'],
                 'created_by_user_id' => $request->user()?->id,
-                'transaction_number' => $this->generateTransactionNumber(),
+                'transaction_number' => $numberGenerator->generate('FTX'),
                 'transaction_date' => $data['transaction_date'],
                 'direction' => $category->direction(),
                 'category' => $category->value,
@@ -176,78 +173,5 @@ class FinancialTransactionController extends Controller
         $financial_transaction->delete();
 
         return redirect()->route('financial-transactions.index')->with('success', 'Financial transaction deleted successfully.');
-    }
-
-    /**
-     * @return array{month: string, revenue: float, expenses: float, profit: float}
-     */
-    private function monthlyPoint(Carbon $month): array
-    {
-        $start = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth();
-
-        $summary = $this->summary($month);
-
-        return [
-            'month' => $month->format('M'),
-            'revenue' => $summary['revenue'],
-            'expenses' => $summary['expenses'],
-            'profit' => $summary['profit'],
-        ];
-    }
-
-    /**
-     * @return array<int, array{category: string, total: float}>
-     */
-    private function categoryBreakdown(Carbon $month): array
-    {
-        $start = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth();
-
-        return [
-            ['category' => FinancialTransactionCategory::Revenue->value, 'total' => $this->sumByCategory($start, $end, FinancialTransactionCategory::Revenue->value)],
-            ['category' => FinancialTransactionCategory::FuelCost->value, 'total' => $this->sumByCategory($start, $end, FinancialTransactionCategory::FuelCost->value)],
-            ['category' => FinancialTransactionCategory::Insurance->value, 'total' => $this->sumByCategory($start, $end, FinancialTransactionCategory::Insurance->value)],
-            ['category' => FinancialTransactionCategory::MaintenanceCost->value, 'total' => $this->sumByCategory($start, $end, FinancialTransactionCategory::MaintenanceCost->value)],
-            ['category' => FinancialTransactionCategory::OtherExpense->value, 'total' => $this->sumByCategory($start, $end, FinancialTransactionCategory::OtherExpense->value)],
-        ];
-    }
-
-    /**
-     * @return array{revenue: float, expenses: float, profit: float, roi: float}
-     */
-    private function summary(Carbon $month): array
-    {
-        $start = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth();
-
-        $revenue = $this->sumByCategory($start, $end, FinancialTransactionCategory::Revenue->value);
-        $fuelCost = $this->sumByCategory($start, $end, FinancialTransactionCategory::FuelCost->value);
-        $insurance = $this->sumByCategory($start, $end, FinancialTransactionCategory::Insurance->value);
-        $maintenanceCost = $this->sumByCategory($start, $end, FinancialTransactionCategory::MaintenanceCost->value);
-        $otherExpenses = $this->sumByCategory($start, $end, FinancialTransactionCategory::OtherExpense->value);
-        $expenses = $fuelCost + $insurance + $maintenanceCost + $otherExpenses;
-        $profit = $revenue - $expenses;
-
-        return [
-            'revenue' => round($revenue, 2),
-            'expenses' => round($expenses, 2),
-            'profit' => round($profit, 2),
-            'roi' => $expenses > 0 ? round(($profit / $expenses) * 100, 2) : 0.0,
-        ];
-    }
-
-    private function sumByCategory(Carbon $start, Carbon $end, string $category): float
-    {
-        return (float) FinancialTransaction::query()
-            ->whereBetween('transaction_date', [$start, $end])
-            ->where('status', FinancialTransactionStatus::Posted->value)
-            ->where('category', $category)
-            ->sum('amount');
-    }
-
-    private function generateTransactionNumber(): string
-    {
-        return 'FTX-'.now()->format('YmdHis').'-'.Str::upper(Str::random(5));
     }
 }
