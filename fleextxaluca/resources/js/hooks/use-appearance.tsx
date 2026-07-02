@@ -2,7 +2,17 @@ import { useEffect, useState } from 'react';
 
 export type Appearance = 'light' | 'dark' | 'system';
 
-const prefersDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+const isBrowser = () => typeof window !== 'undefined';
+
+const getMediaQuery = () => {
+    if (!isBrowser()) {
+        return null;
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)');
+};
+
+const prefersDark = () => getMediaQuery()?.matches ?? false;
 
 const applyTheme = (appearance: Appearance) => {
     const isDark = appearance === 'dark' || (appearance === 'system' && prefersDark());
@@ -10,36 +20,50 @@ const applyTheme = (appearance: Appearance) => {
     document.documentElement.classList.toggle('dark', isDark);
 };
 
-const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
 const handleSystemThemeChange = () => {
+    if (!isBrowser()) {
+        return;
+    }
+
     const currentAppearance = localStorage.getItem('appearance') as Appearance;
     applyTheme(currentAppearance || 'system');
 };
 
 export function initializeTheme() {
+    if (!isBrowser()) {
+        return;
+    }
+
     const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
 
     applyTheme(savedAppearance);
 
-    // Add the event listener for system theme changes...
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    getMediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
 export function useAppearance() {
     const [appearance, setAppearance] = useState<Appearance>('system');
 
     const updateAppearance = (mode: Appearance) => {
+        if (!isBrowser()) {
+            setAppearance(mode);
+            return;
+        }
+
         setAppearance(mode);
         localStorage.setItem('appearance', mode);
         applyTheme(mode);
     };
 
     useEffect(() => {
+        if (!isBrowser()) {
+            return;
+        }
+
         const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
         updateAppearance(savedAppearance || 'system');
 
-        return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+        return () => getMediaQuery()?.removeEventListener('change', handleSystemThemeChange);
     }, []);
 
     return { appearance, updateAppearance };

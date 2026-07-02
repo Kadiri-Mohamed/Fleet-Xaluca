@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\Agency;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -40,6 +43,14 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role_id' => Role::query()->firstOrCreate(
+                ['slug' => UserRole::ReservationAgent->value],
+                ['name' => 'Reservation Agent', 'is_system' => true],
+            )->id,
+            'agency_id' => Agency::query()->firstOrCreate(
+                ['code' => 'HQ'],
+                ['name' => 'Headquarters', 'timezone' => config('app.timezone', 'UTC'), 'status' => 'active'],
+            )->id,
         ]);
 
         event(new Registered($user));
