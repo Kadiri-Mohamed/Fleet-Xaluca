@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\VehicleStatus;
 use App\Http\Requests\Vehicle\StoreVehicleRequest;
 use App\Http\Requests\Vehicle\UpdateVehicleRequest;
+use App\Models\Maintenance;
 use App\Models\Agency;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
@@ -73,9 +74,16 @@ class VehicleController extends Controller
     public function show(Vehicle $vehicle): Response
     {
         $vehicle->load('agency');
+        $maintenances = Maintenance::query()
+            ->with(['vehicle:id,unit_number,plate_number', 'createdBy:id,name'])
+            ->where('vehicle_id', $vehicle->id)
+            ->latest('scheduled_at')
+            ->take(5)
+            ->get();
 
         return Inertia::render('vehicles/show', [
             'vehicle' => $vehicle,
+            'maintenances' => $maintenances,
             'canManage' => request()->user()?->can('update', $vehicle) ?? false,
         ]);
     }

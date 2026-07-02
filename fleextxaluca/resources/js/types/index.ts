@@ -100,6 +100,15 @@ export interface Vehicle {
     deleted_at: string | null;
 }
 
+export interface MaintenanceVehicle {
+    id: number;
+    agency_id: number;
+    unit_number: string;
+    plate_number: string;
+    status: string;
+    agency?: Agency | null;
+}
+
 export interface ReservationVehicle {
     id: number;
     agency_id: number;
@@ -155,7 +164,9 @@ export interface Maintenance {
     id: number;
     agency_id: number;
     vehicle_id: number;
+    vehicle?: MaintenanceVehicle | null;
     created_by_user_id: number | null;
+    createdBy?: User | null;
     maintenance_number: string;
     type: string;
     status: string;

@@ -1,9 +1,10 @@
 import { ConfirmDialog } from '@/components/fleet/confirm-dialog';
+import { MaintenanceHistory } from '@/components/fleet/maintenance-history';
 import { VehicleStatusBadge } from '@/components/fleet/vehicle-status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type Vehicle } from '@/types';
+import { type BreadcrumbItem, type Maintenance, type Vehicle } from '@/types';
 import { Head, router, Link } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -14,10 +15,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface VehicleShowProps {
     vehicle: Vehicle;
+    maintenances: Maintenance[];
     canManage: boolean;
 }
 
-export default function Show({ vehicle, canManage }: VehicleShowProps) {
+export default function Show({ vehicle, maintenances, canManage }: VehicleShowProps) {
     const [deleteOpen, setDeleteOpen] = useState(false);
 
     return (
@@ -76,6 +78,8 @@ export default function Show({ vehicle, canManage }: VehicleShowProps) {
                         </CardContent>
                     </Card>
                 </div>
+
+                <MaintenanceHistory maintenances={maintenances} vehicleId={vehicle.id} />
             </div>
 
             <ConfirmDialog
